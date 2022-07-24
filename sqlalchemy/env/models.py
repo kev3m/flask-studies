@@ -44,5 +44,4 @@ class Atividades(Base):
         db_session.delete(self)
         db_session.commit()
 
-
 Base.metadata.create_all(bind=engine)

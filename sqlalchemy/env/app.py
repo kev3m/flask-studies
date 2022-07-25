@@ -1,13 +1,33 @@
+import re
 from urllib import response
 from flask import Flask 
 from flask_restful import Resource, Api, request
 from models import Pessoas
-import json
+from flask_httpauth import HTTPBasicAuth
 
+auth = HTTPBasicAuth()
 app = Flask(__name__)
 api =  Api(app)
 
+USUARIOS = {
+    'keven': '123',
+    'cris':'321'
+}
+
+#Decorador
+@auth.verify_password
+def verificacao(login, senha):
+    print('Validando usuario')
+    print(USUARIOS.get(login) == senha)
+    if not(login, senha):
+        return False
+    return USUARIOS.get(login) == senha
+
+
+
 class Pessoa(Resource):
+    #Para acessar o metódo get, é necessário estar logado
+    @auth.login_required
     def get(self,nome):
         pessoa = Pessoas.query.filter_by(nome=nome).first()
         try:
@@ -61,8 +81,27 @@ class ListaPessoas(Resource):
         }
         return response
 
+class Atividades(Resource):
+    def get(self):
+        atividades = Atividades.query.all()
+        response = [{'id': i.id, 'nome': i.nome, 'pessoa': i.pessoa.nome} for i in atividades]
+        return response
+
+    def post(self):
+        dados = request.json
+        pessoa = Pessoas.query.filter_by(nome=dados['pessoa']).first()
+        atividade = Atividades(nome=dados['nome'], pessoa=pessoa)
+        atividade.save()
+        response = {
+            'pessoa': atividade.pessoa.nome,
+            'nome': atividade.nome,
+            'id': atividade.id
+        }
+        return response
+
 api.add_resource(Pessoa, '/pessoa/<string:nome>/')
 api.add_resource(ListaPessoas, '/pessoa/')
+api.add_resource(Atividades, '/atividades/')
 
 if __name__ == '__main__':
     app.run(debug=True)
